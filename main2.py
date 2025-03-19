@@ -1,21 +1,28 @@
 import datetime
-import json
+import csv
 
 # File to store expenses
-EXPENSES_FILE = "expenses.json"
+EXPENSES_FILE = "expenses.csv"
 
 # Load expenses from file
 try:
-    with open(EXPENSES_FILE, "r") as file:
-        expenses = json.load(file)
-except (FileNotFoundError, json.JSONDecodeError):
+    with open(EXPENSES_FILE, "r", newline='') as file:
+        reader = csv.DictReader(file)
+        expenses = []
+        for row in reader:
+            try:
+                row["amount"] = float(row["amount"])
+                expenses.append(row)
+            except ValueError:
+                print(f"Invalid amount in row: {row}. Skipping.")
+except FileNotFoundError:
     expenses = []
 
-
 def save_expenses():
-    with open(EXPENSES_FILE, "w") as file:
-        json.dump(expenses, file, indent=4)
-
+    with open(EXPENSES_FILE, "w", newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=["date", "amount", "category", "description"])
+        writer.writeheader()
+        writer.writerows(expenses)
 
 def add_expense(date, amount, category, description):
     expenses.append({
@@ -27,16 +34,13 @@ def add_expense(date, amount, category, description):
     save_expenses()
     print("Expense added successfully!\n")
 
-
 def view_expenses():
     if not expenses:
         print("No expenses recorded yet.\n")
         return
     for expense in expenses:
-        print(
-            f"Date: {expense['date']}, Amount: ${expense['amount']}, Category: {expense['category']}, Description: {expense['description']}")
+        print(f"Date: {expense['date']}, Amount: ${expense['amount']}, Category: {expense['category']}, Description: {expense['description']}")
     print()
-
 
 def filter_expenses(category=None, start_date=None, end_date=None):
     filtered = expenses
@@ -44,32 +48,26 @@ def filter_expenses(category=None, start_date=None, end_date=None):
         filtered = [e for e in filtered if e["category"] == category]
     if start_date and end_date:
         filtered = [e for e in filtered if start_date <= datetime.datetime.strptime(e["date"], "%Y-%m-%d") <= end_date]
-
     if not filtered:
         print("No matching expenses found.\n")
     else:
         for expense in filtered:
-            print(
-                f"Date: {expense['date']}, Amount: ${expense['amount']}, Category: {expense['category']}, Description: {expense['description']}")
+            print(f"Date: {expense['date']}, Amount: ${expense['amount']}, Category: {expense['category']}, Description: {expense['description']}")
     print()
-
 
 def summarize_expenses():
     category_totals = {}
     total_expense = 0
-
     for expense in expenses:
         total_expense += expense["amount"]
         if expense["category"] in category_totals:
             category_totals[expense["category"]] += expense["amount"]
         else:
             category_totals[expense["category"]] = expense["amount"]
-
     print("Expense Summary:")
     for category, total in category_totals.items():
         print(f"{category}: ${total}")
     print(f"Total Expenses: ${total_expense}\n")
-
 
 def main():
     while True:
@@ -80,7 +78,6 @@ def main():
         print("4. Summarize Expenses")
         print("5. Exit")
         choice = input("Choose an option: ")
-
         if choice == "1":
             date = input("Enter date (YYYY-MM-DD): ")
             amount = float(input("Enter amount: "))
@@ -105,5 +102,4 @@ def main():
             print("Invalid option. Please try again.\n")
 
 
-if __name__ == "__main__":
-    main()
+main()
